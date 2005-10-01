@@ -1,6 +1,6 @@
 package XML::DOM::Lite;
 
-our $VERSION = 0.01;
+our $VERSION = 0.02;
 
 use XML::DOM::Lite::Constants qw(:all);
 use XML::DOM::Lite::Parser;
@@ -227,7 +227,8 @@ Copyright (C) 2005 Richard Hundt <richard NO SPAM AT protea-systems.com>
 
 =head1 LICENCE
 
-Oryx may be used under the same terms as Perl itself.
+This library is free software and may be used under the same terms as
+Perl itself.
 
 =cut
 
