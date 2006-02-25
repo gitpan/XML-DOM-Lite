@@ -53,6 +53,7 @@ sub reset {
 sub _parse {
     my ($self, $stream) = @_;
     $$stream =~ s/<!DOCTYPE[^<]+//s;
+    $$stream =~ s/^<\?[^<]+//s;  # thanks to Robert Frank
     while ($stream && ref $stream && $$stream) {
 	$stream = $self->_step($stream);
     }
@@ -76,7 +77,7 @@ our @RX = (
     qr/\r/o,                              #  9
     qr/^(\S+)(\s*(.+))?/so,               # 10
     qr/^\s*$/so,                          # 11
-    qr/^\s*([A-Za-z0-9:.]+)="([^"]*)"/so, # 12  " # poor emacs
+    qr/^\s*([A-Za-z0-9:.]+)\s*=\s*(["'])(.*?)\2/so # 12 - thanks to Robert Frank for this
 );
 
 sub _step {
@@ -206,7 +207,7 @@ sub _parseAttributes {
     while ($attr_str) {
 	next if ($attr_str =~ s/$RX[11]//);
 	if ($attr_str =~ s/$RX[12]//) {
-	    $attrs{$1} = $2;
+	    $attrs{$1} = $3;
 	} else {
 	    die "found unparsable garbage hanging around in attribute "
 	      ."space for tag [$tagName] '$attr_str'";

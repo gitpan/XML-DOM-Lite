@@ -1,6 +1,6 @@
 package XML::DOM::Lite;
 
-our $VERSION = 0.02;
+our $VERSION = 0.03;
 
 use XML::DOM::Lite::Constants qw(:all);
 use XML::DOM::Lite::Parser;
@@ -220,6 +220,10 @@ have at the moment):
 =head1 BUGS
 
 Better error handling.
+
+=head1 ACKNOWLEDGEMENTS
+
+Robert Frank
 
 =head1 AUTHOR
 

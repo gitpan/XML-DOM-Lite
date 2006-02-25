@@ -1,5 +1,7 @@
 package XML::DOM::Lite::Serializer;
 
+use XML::DOM::Lite::Constants qw(:all);
+
 sub new {
     my $class = shift;
     return bless { }, $class;
