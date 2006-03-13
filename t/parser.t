@@ -1,10 +1,13 @@
+# vim:set ft=perl:
 use lib 'lib';
 
-use Test::More tests => 15;
+use Test::More tests => 16;
 
-use XML::DOM::Lite qw(Parser :constants);
+use XML::DOM::Lite qw(Parser Serializer :constants);
 
 my $xmlstr = <<XML;
+<?xml version="1.0"?>
+<!-- this is a comment -->
 <root>
   <item1 attr1="val1" attr2="val2">text</item1>
   <item2 id="item2id">
@@ -22,10 +25,10 @@ my $xmlstr = <<XML;
 </root>
 XML
 
-my $parser = Parser->new;
+my $parser = Parser->new(whitespace => 'strip');
 ok($parser);
 
-my $doc = Parser->parse($xmlstr);
+my $doc = $parser->parse($xmlstr);
 ok($doc);
 
 ok($doc->nodeType & DOCUMENT_NODE);
@@ -41,6 +44,8 @@ ok(scalar(@$item3s) eq 2);
 ok(my $item2 = $doc->getElementById("item2id"));
 ok($item2->getAttribute("id") eq "item2id");
 ok($item2->tagName eq "item2");
-ok($doc->documentElement->firstChild->tagName eq "item1");
-ok($doc->documentElement->lastChild->nodeType & TEXT_NODE);
-ok($doc->documentElement->lastChild->nodeValue eq "  some more text\n");
+ok(ref($item2->parentNode));
+ok($doc->documentElement->firstChild->tagName eq "item1", "first child is item1");
+ok($doc->documentElement->lastChild->nodeType & TEXT_NODE, "last child is a text node");
+ok($doc->documentElement->lastChild->nodeValue eq "some more text", "text is sane at the end");
+

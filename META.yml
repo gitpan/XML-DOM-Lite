@@ -1,5 +1,5 @@
 name: XML-DOM-Lite
-version: 0.03
+version: 0.04
 abstract: Lite Pure Perl XML DOM Parser
 author: Richard Hundt <richard@protea-systems.com>
 license: artistic

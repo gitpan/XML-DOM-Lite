@@ -1,5 +1,6 @@
 package XML::DOM::Lite::Node;
 
+use Scalar::Util qw(weaken);
 use XML::DOM::Lite::NodeList;
 use XML::DOM::Lite::Constants qw(:all);
 
@@ -24,24 +25,14 @@ sub childNodes {
 sub parentNode {
     my $self = shift;
     if (@_) {
-	$self->_setParentNode(@_);
+	weaken($self->{parentNode} = shift());
     } else {
-	return $self->_getParentNode();
+	return $self->{parentNode};
     }
 }
 
 sub documentElement {
-    $_[0]->{documentElement} = $_[1] if $_[1]; $_[0]->{documentElement};
-}
-
-sub _setParentNode {
-    my ($self, $parentNode) = @_;
-    $self->{parentNode} = $parentNode;
-}
-
-sub _getParentNode {
-    my ($self) = @_;
-    return $self->{parentNode};
+    weaken($_[0]->{documentElement} = $_[1]) if $_[1]; $_[0]->{documentElement};
 }
 
 sub nodeType {
@@ -125,7 +116,7 @@ sub lastChild {
 }
 
 sub ownerDocument {
-    my $self = shift; $self->{ownerDocument} = shift if @_;
+    my $self = shift; weaken($self->{ownerDocument} = shift) if @_;
     $self->{ownerDocument};
 }
 
@@ -175,45 +166,6 @@ sub cloneNode {
     return $copy;
 }
 
-# breaks cyclic refs from child to parent nodes
-sub decycle {
-    my ($self, $deep) = @_;
-    foreach (@{$self->childNodes}) {
-        undef $_->{parentNode};
-        undef $_->{ownerDocument};
-	if ($deep) {
-	    $_->decycle($deep);
-	}
-    }
-}
-
-# rebuilds refs from child to parent nodes
-sub recycle {
-    my ($self, $deep) = @_;
-    foreach (@{$self->childNodes}) {
-	$_->parentNode($self);
-        if ($self->nodeType & 256) {
-            $_->ownerDocument($self);
-        } else {
-            $_->ownerDocument($self->ownerDocument);
-        }
-	if ($deep) {
-	    $_->recycle($deep);
-	}
-    }
-}
-
-# this is here for curiosity... I was playing with a way
-# of creating a unique hash key from a node's type and
-# position in the DOM tree to prevent cyclic references
-sub hash {
-    my $self = shift;
-    $hash = 0;
-    foreach (split //, shift) {
-	$hash = $hash*33 + ord($_);
-    }
-    return $hash;
-}
 
 1;
 

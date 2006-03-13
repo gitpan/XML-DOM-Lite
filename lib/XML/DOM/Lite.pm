@@ -1,6 +1,6 @@
 package XML::DOM::Lite;
 
-our $VERSION = 0.03;
+our $VERSION = 0.04;
 
 use XML::DOM::Lite::Constants qw(:all);
 use XML::DOM::Lite::Parser;
@@ -46,7 +46,11 @@ XML::DOM::Lite - Lite Pure Perl XML DOM Parser Kit
  $parser = Parser->new( %options );
  $doc = Parser->parse($xmlstr);
  $doc = Parser->parseFile('/path/to/file.xml');
-
+ 
+ # strip whitespace (can be about 30% faster)
+ $doc = Parser->parse($xml, whitespace => 'strip');
+ 
+ # rudimentary XPath support
  $nlist = $doc->selectNodes('/xpath/expression');
  $node = $doc->selectSingleNode('/xpath/expression');
  
@@ -57,7 +61,6 @@ XML::DOM::Lite - Lite Pure Perl XML DOM Parser Kit
  $textnode = $doc->createTextNode("some text string");
  $element = $doc->createElement("myTagName");
  $xmlstr = $doc->xml;
- $doc->dispose; # break cyclic refs
  
  
  # All Nodes
@@ -204,18 +207,21 @@ All I<nodeType> comparisons are done with the bitwise `&' operator
 against the constants exported by XML::DOM::Constants (which is why it
 is customary to import the I<:constants> tag) for performance reasons.
 
+=head2 Parser Options
+
+So far the only options which are supported involve white space stripping
+and normalization. The whitespace option value can be 'strip' or 'normalize'
+
+The 'strip' option removes whitespace at the beginning and end of text node
+values. The 'normalize' option replaces all multiple tab, new line space characters
+with a single space character.
+
 =head1 PERFORMANCE
 
-The following table shows some benchmark results on 2 GHz Athlon 64
-running in 32 bit mode (okay, it's fairly beefy, but that's what I
-have at the moment):
-
- +---------------------------------------------+
- | elements | text | attributes | total | time |
- +---------------------------------------------+
- |     1000 |  500 |        500 |  2000 | 0.32 |
- |     2000 | 1000 |       1000 |  4000 | 0.69 |
- +---------------------------------------------+
+Performance has been drastically improved as of version 0.4. We're seeing benchmark
+time improvements from 16 seconds to 3.6 seconds for 7500 nodes on a 2.8 GHz Celeron.
+This is due to a complete overhaul of the parser using the "shallow parsing"
+techniques and regular expressions documented on L<http://www.cs.sfu.ca/~cameron/REX.html>
 
 =head1 BUGS
 
@@ -223,7 +229,9 @@ Better error handling.
 
 =head1 ACKNOWLEDGEMENTS
 
+Thanks to:
 Robert Frank
+Robert D. Cameron
 
 =head1 AUTHOR
 

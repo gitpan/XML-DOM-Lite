@@ -82,10 +82,6 @@ sub elements {
     return $_[0]->{elements};
 }
 
-sub dispose {
-    $_[0]->decycle(1);
-}
-
 sub xml {
     my $self = shift;
     my $serializer = XML::DOM::Lite::Serializer->new;
@@ -112,9 +108,6 @@ Document - XML DOM Lite Document
  $nlist = $doc->selectNodes("/xpath/expression");
  $node = $doc->selectSingleNode("/xpath/expression");
  
- # break cyclic refs
- $doc->dispose;
-
 =head1 DESCRIPTION
 
 XML::DOM::Lite::Document objects are returned by the Parser and shouldn't
