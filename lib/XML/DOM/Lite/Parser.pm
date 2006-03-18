@@ -109,9 +109,13 @@ sub _shallow_parse {
     my %options = %{$self->{options}};
     if (defined($options{'whitespace'})) {
         my $mode = $options{'whitespace'};
-        $XML =~ s/>$S/>/sg,
-        $XML =~ s/$S</</sg if (index($mode, 'strip') >= 0);
-        $XML =~ s/$S/ /sg  if (index($mode, 'normalize') >= 0);
+        if (index($mode, 'strip') >= 0) {
+            $XML =~ s/>$S/>/sg;
+            $XML =~ s/$S</</sg;
+        }
+        if (index($mode, 'normalize') >= 0) {
+            $XML =~ s/$S/ /sg
+        }
     }
 
     return $XML =~ /$XML_SPE/go;

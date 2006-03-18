@@ -21,3 +21,4 @@ MANIFEST			This list of files
 META.yml
 t/benchmark.pl
 t/parser.t
+t/whitespace.t
