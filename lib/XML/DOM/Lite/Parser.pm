@@ -86,6 +86,22 @@ sub parse {
     return $self->{document};
 }
 
+sub parseFile {
+    my ($self, $filename) = @_;
+    unless (ref $self) {
+	$self = __PACKAGE__->new;
+    }
+    my $stream;
+    {
+        open FH, $filename or
+            die "can't open file $filename for reading ".$!;
+        local $/ = undef;
+        $stream = <FH>;
+        close FH;
+    }
+    return $self->parse($stream);
+}
+
 sub _shallow_parse { 
     my ($self, $XML) = @_;
 
