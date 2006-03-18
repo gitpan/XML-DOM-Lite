@@ -1,7 +1,7 @@
 # vim:set ft=perl:
 use lib 'lib';
 
-use Test::More tests => 16;
+use Test::More tests => 26;
 
 use XML::DOM::Lite qw(Parser Serializer :constants);
 
@@ -49,3 +49,28 @@ ok($doc->documentElement->firstChild->tagName eq "item1", "first child is item1"
 ok($doc->documentElement->lastChild->nodeType & TEXT_NODE, "last child is a text node");
 ok($doc->documentElement->lastChild->nodeValue eq "some more text", "text is sane at the end");
 
+$xmlstr = <<XML;
+<attrTest attr1 = 'attr1: single quotes'
+                attr2= "attr2: double quotes"
+                attr3 ="attr3: single quote ' in double quotes"
+                attr4='attr4: double quote " in single quotes'
+                attr5="attr5: lt > in value"/>
+XML
+
+$parser = Parser->new(whitespace => 'normalize');
+ok($parser);
+
+$doc = $parser->parse($xmlstr);
+ok($doc);
+
+ok($doc->documentElement->tagName eq 'attrTest');
+ok($doc->documentElement->nodeName eq $doc->documentElement->tagName);
+
+my $docel = $doc->documentElement;
+ok($docel);
+
+ok($docel->getAttribute('attr1') eq 'attr1: single quotes');
+ok($docel->getAttribute('attr2') eq "attr2: double quotes");
+ok($docel->getAttribute('attr3') eq "attr3: single quote ' in double quotes");
+ok($docel->getAttribute('attr4') eq 'attr4: double quote " in single quotes');
+ok($docel->getAttribute('attr5') eq "attr5: lt > in value");

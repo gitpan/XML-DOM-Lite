@@ -7,7 +7,7 @@ license('artistic');
 version_from('lib/XML/DOM/Lite.pm');
 build_requires('Test::More');
 
-requires(qw(perl 5.6.1));
+requires('Scalar::Util');
 
 check_nmake();
 &WriteAll();

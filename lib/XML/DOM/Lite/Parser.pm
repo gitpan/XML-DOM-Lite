@@ -39,14 +39,15 @@ our $PI_CE = "$Name(?:$PI_Tail)?";
 our $EndTagCE = "$Name(?:$S)?>?";
 our $AttValSE = "\"[^<\"]*\"|'[^<']*'";
 our $ElemTagCE = "$Name(?:$S$Name(?:$S)?=(?:$S)?(?:$AttValSE))*(?:$S)?/?>?";
-our $MarkupSPE = "<(?:!(?:$DeclCE)?|\\?(?:$PI_CE)?|/(?:$EndTagCE)?|(?:$ElemTagCE)?)";
+our $ElementCE = "/(?:$EndTagCE)?|(?:$ElemTagCE)?";
+our $MarkupSPE = "<(?:!(?:$DeclCE)?|\\?(?:$PI_CE)?|(?:$ElementCE)?)";
 our $XML_SPE = "$TextSE|$MarkupSPE";
 
 #========================================================================
 
 # these have captures for parsing the attributes
 our $AttValSE2 = "\"([^<\"]*)\"|'([^<']*)'";
-our $ElemTagCE2 = "(?:($Name)(?:$S)?=(?:$S)?$AttValSE2)+(?:$S)?/?>?";
+our $ElemTagCE2 = "(?:($Name)(?:$S)?=(?:$S)?($AttValSE2))+(?:$S)?/?>?";
 
 sub new {
     my ($class, %options) = @_;
@@ -68,22 +69,19 @@ sub parse {
     push @{$self->{stack}}, $self->{document};
 
     STEP : while (my $n = shift @nodes) {
-        $n =~ /^$TextSE$/o && do {
-            $self->_handle_text_node($n);
-            next STEP;
-        };
-        $n =~ /^$MarkupSPE$/o && do {
+        substr($n, 0, 1) eq '<' && do {
+            substr($n, 1, 1) eq '!' && do {
+                $self->_handle_decl_node($n);
+                next STEP;
+            };
+            substr($n, 1, 1) eq '?' && do {
+                $self->_handle_pi_node($n);
+                next STEP;
+            };
             $self->_handle_element_node($n);
             next STEP;
         };
-        $n =~ /^<!(?:$DeclCE)?$/ && do {
-            $self->_handle_decl_node($n);
-            next STEP;
-        };
-        $n =~ /^<\?(?:$PI_CE)?/ && do {
-            $self->_handle_pi_node($n);
-            next STEP;
-        };
+        $self->_handle_text_node($n);
     }
     return $self->{document};
 }
@@ -105,17 +103,41 @@ sub _shallow_parse {
 
 sub _handle_decl_node {
     my ($self, $decl) = @_;
+    my $kind;
+    my $length = length($decl);
+    my $start = 1;
+    $parent = $self->{stack}->[$#{$self->{stack}}];
+    substr($decl, 0, 4) eq '<!--' && do {
+	$start = 4;
+	$length = $length - $start - 3;
+	$kind = COMMENT_NODE;
+    };
+    substr($decl, 0, 9) eq '<![CDATA[' && do {
+	$start = 9;
+	$length = $length - $start - 3;
+	$kind = CDATA_SECTION_NODE;
+    };
+    substr($decl, 0, 9) eq '<!DOCTYPE' && do { # I'm cheating here, should be a separate node!
+	$start = 9;
+	$length = $length - $start - 1;
+	$kind = DOCUMENT_TYPE_NODE;
+    };
+    return $self->_mk_gen_node(substr($decl, $start, $length), $parent, $kind);
 }
 
 sub _handle_pi_node {
     my ($self, $pi) = @_;
+    $pi =~ s/^<\?\S+//o;
+    $pi =~ s/\?>$//so;
+    $parent = $self->{stack}->[$#{$self->{stack}}];
+    return $self->_mk_gen_node($pi, $parent, PROCESSING_INSTRUCTION_NODE);
 }
 
 sub _handle_text_node {
     my ($self, $text) = @_;
     $parent = $self->{stack}->[$#{$self->{stack}}];
     $text =~ s/^\n//so; return unless $text;
-    return $self->_mk_text_node($text, $parent);
+    return $self->_mk_gen_node($text, $parent, TEXT_NODE);
 }
 
 sub _handle_element_node {
@@ -160,6 +182,20 @@ sub _handle_element_node_end {
     return $self->{stack}->[$#{$self->{stack}}];
 }
 
+sub _mk_gen_node {
+    my ($self, $str, $parent, $type) = @_;
+    $parent = $self->{stack}->[$#{$self->{stack}}] unless $parent;
+    my $node = XML::DOM::Lite::Node->new({
+        nodeType      => $type,
+        nodeValue     => $str,
+    });
+
+    $parent->appendChild($node);
+    $node->ownerDocument($self->{document});
+
+    return $node;
+}
+
 sub _mk_text_node {
     my ($self, $str, $parent) = @_;
     $parent = $self->{stack}->[$#{$self->{stack}}] unless $parent;
@@ -178,8 +214,7 @@ sub _mk_text_node {
 sub _mk_element_node {
     my ($self, $elmnt, $parent) = @_;
 
-    $elmnt =~ s/^($Name)$S//o;
-    my $tagName = $1;
+    ($tagName, $elmnt) = split(/\s+/, $elmnt, 2);
 
     my $attrs = $self->_parse_attributes($elmnt);
     my $node = XML::DOM::Lite::Node->new({
@@ -198,8 +233,10 @@ sub _parse_attributes {
     my ($self, $elmnt) = @_;
 
     my %attrs;
+    return \%attrs unless $elmnt;
+
     while ($elmnt =~ s/$ElemTagCE2//o) {
-        $attrs{$1} = $2;
+        $attrs{$1} = defined($3) ? $3 : $4;
     }
 
     return \%attrs;

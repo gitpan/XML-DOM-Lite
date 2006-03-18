@@ -1,6 +1,6 @@
 package XML::DOM::Lite;
 
-our $VERSION = 0.04;
+our $VERSION = 0.05;
 
 use XML::DOM::Lite::Constants qw(:all);
 use XML::DOM::Lite::Parser;
@@ -67,11 +67,13 @@ XML::DOM::Lite - Lite Pure Perl XML DOM Parser Kit
  $copy = $node->cloneNode($deep);
  $nodeType = $node->nodeType;
  $parent = $node->parentNode;
+ $name = $node->nodeName;
  
  
  # Element Nodes
  $last = $node->lastChild;
  $first = $node->firstChild;
+ $tag = $node->tagName;
  
  $node->setAttribute("foo", $bar);
  $foo = $node->getAttribute("foo");
@@ -86,6 +88,10 @@ XML::DOM::Lite - Lite Pure Perl XML DOM Parser Kit
  $nodeValue = $node->nodeValue;
  $node->nodeValue("new text value");
  
+ # Processing Instruction Nodes
+ # CDATA Nodes
+ # Comments
+ $data = $node->nodeValue;
  
  # NodeList
  $item = $nodeList->item(42);
@@ -210,10 +216,17 @@ is customary to import the I<:constants> tag) for performance reasons.
 =head2 Parser Options
 
 So far the only options which are supported involve white space stripping
-and normalization. The whitespace option value can be 'strip' or 'normalize'
+and normalization. The whitespace option value can be 'strip' or 'normalize'.
 
-The 'strip' option removes whitespace at the beginning and end of text node
-values. The 'normalize' option replaces all multiple tab, new line space characters
+The 'strip' option removes whitespace at the beginning and end of XML tag.
+Thus, whitespace between tags is completely eliminated and whitespace at the
+beginning and end of text nodes is removed. If you are using inline tags, this
+will result in the removal of whitespace between text.
+
+E.g the sequence "Sequence of <b>bold</b> and <i>italic</i> words" will be changed to
+'Sequence ofboldanditalcwords'.
+
+The 'normalize' option replaces all multiple tab, new line space characters
 with a single space character.
 
 =head1 PERFORMANCE

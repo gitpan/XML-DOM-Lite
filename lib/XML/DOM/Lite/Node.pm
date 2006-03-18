@@ -40,6 +40,11 @@ sub nodeType {
     $self->{nodeType};
 }
 
+sub nodeName {
+    my $self = shift; $self->{tagName} = shift if @_;
+    $self->{tagName}; # Should acutally be nodeName!
+}
+
 sub tagName {
     my $self = shift; $self->{tagName} = shift if @_;
     $self->{tagName};

@@ -4,7 +4,7 @@ require Exporter;
 @ISA = qw(Exporter);
 
 our @filterActions = qw(FILTER_ACCEPT FILTER_REJECT FILTER_SKIP);
-our @nodeTypes = qw(ELEMENT_NODE ATTRIBUTE_NODE TEXT_NODE DOCUMENT_NODE);
+our @nodeTypes = qw(ELEMENT_NODE ATTRIBUTE_NODE TEXT_NODE COMMENT_NODE PROCESSING_INSTRUCTION_NODE CDATA_SECTION_NODE DOCUMENT_TYPE_NODE DOCUMENT_NODE);
 our @showTypes = qw(SHOW_ELEMENT SHOW_ATTRIBUTE SHOW_TEXT SHOW_DOCUMENT SHOW_ALL);
 
 use constant FILTER_ACCEPT  => 1;
@@ -20,6 +20,10 @@ use constant SHOW_ALL       => 0xFFFF;
 use constant ELEMENT_NODE   => 0x0001;
 use constant ATTRIBUTE_NODE => 0x0002;
 use constant TEXT_NODE      => 0x0004;
+use constant COMMENT_NODE   => 0x0008;
+use constant PROCESSING_INSTRUCTION_NODE        => 0x0010;
+use constant CDATA_SECTION_NODE => 0x0020;
+use constant DOCUMENT_TYPE_NODE => 0x0040;
 use constant DOCUMENT_NODE  => 0x0100;
 
 
