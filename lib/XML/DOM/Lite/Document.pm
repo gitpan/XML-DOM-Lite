@@ -13,13 +13,22 @@ use base qw(XML::DOM::Lite::Node);
 sub new {
     my ($class) = @_;
     return bless $class->SUPER::new({
+	nodeName   => '#document',
 	nodeType   => DOCUMENT_NODE,
 	childNodes => [ ],
 	elements   => { },
     }), $class;
 }
 
-sub parentNode { return undef };
+sub parentNode { undef }
+
+sub appendChild {
+    my ($self, $node) = @_;
+    if (not $self->{documentElement} and ($node->nodeType & ELEMENT_NODE)) {
+	$self->{documentElement} = $node;
+    }
+    return $self->SUPER::appendChild($node);
+}
 
 sub setElementById {
     my ($self, $id, $node) = @_;
@@ -34,6 +43,7 @@ sub getElementById {
 sub createElement {
     my ($self, $tagName) = @_;
     return XML::DOM::Lite::Node->new({
+	nodeName => $tagName,
         tagName => $tagName,
         nodeType => ELEMENT_NODE,
     });
@@ -42,6 +52,7 @@ sub createElement {
 sub createTextNode {
     my ($self, $str) = @_;
     return XML::DOM::Lite::Node->new({
+	nodeName => '#text',
         nodeType => TEXT_NODE,
         nodeValue => $str,
     });
@@ -49,13 +60,8 @@ sub createTextNode {
 
 sub documentElement {
     my $self = shift;
-    unless ($self->{documentElement}) {
-	foreach (@{$self->childNodes}) {
-	    if ($_->nodeType & 1) { #ELEMENT_NODE
-		$self->{documentElement} = $_;
-		last;
-	    }
-	}
+    if (@_) {
+	$self->{documentElement} = shift;
     }
     $self->{documentElement};
 }

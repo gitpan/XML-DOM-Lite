@@ -9,7 +9,7 @@ my $xmlstr = <<XML;
 <?xml version="1.0"?>
 <!-- this is a comment -->
 <root>
-  <item1 attr1="val1" attr2="val2">text</item1>
+  <item1 attr1="/val1" attr2="val2">text</item1>
   <item2 id="item2id">
     <item3 instance="0"/>
     <item4>

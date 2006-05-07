@@ -83,6 +83,7 @@ sub parse {
         };
         $self->_handle_text_node($n);
     }
+
     return $self->{document};
 }
 
@@ -162,7 +163,7 @@ sub _handle_text_node {
 
 sub _handle_element_node {
     my ($self, $elmnt) = @_;
-    if ($elmnt =~ /\/($EndTagCE)/o) {
+    if ($elmnt =~ /^<\/($EndTagCE)/o) {
         $self->_handle_element_node_end($1);
     }
     elsif ($elmnt =~ /($ElemTagCE)>$/o) {
@@ -206,8 +207,8 @@ sub _mk_gen_node {
     my ($self, $str, $parent, $type) = @_;
     $parent = $self->{stack}->[$#{$self->{stack}}] unless $parent;
     my $node = XML::DOM::Lite::Node->new({
-        nodeType      => $type,
-        nodeValue     => $str,
+        nodeType  => $type,
+        nodeValue => $str,
     });
 
     $parent->appendChild($node);
@@ -221,8 +222,9 @@ sub _mk_text_node {
     $parent = $self->{stack}->[$#{$self->{stack}}] unless $parent;
 
     my $node = XML::DOM::Lite::Node->new({
-	nodeType      => TEXT_NODE,
-	nodeValue     => $str,
+	nodeName  => '#text',
+	nodeType  => TEXT_NODE,
+	nodeValue => $str,
     });
 
     $parent->appendChild($node);
@@ -238,11 +240,11 @@ sub _mk_element_node {
 
     my $attrs = $self->_parse_attributes($elmnt);
     my $node = XML::DOM::Lite::Node->new({
-	nodeType      => ELEMENT_NODE,
-	attributes    => $attrs,
-	tagName       => $tagName,
+	nodeType   => ELEMENT_NODE,
+	attributes => $attrs,
+	nodeName   => $nodeName,
+	tagName    => $tagName,
     });
-
     $parent->appendChild($node);
     $node->ownerDocument($self->{document});
 

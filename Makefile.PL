@@ -8,6 +8,7 @@ version_from('lib/XML/DOM/Lite.pm');
 build_requires('Test::More');
 
 requires('Scalar::Util');
+requires('perl' => '5.8.3');
 
 check_nmake();
 &WriteAll();

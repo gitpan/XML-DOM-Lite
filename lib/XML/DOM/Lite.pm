@@ -1,6 +1,6 @@
 package XML::DOM::Lite;
 
-our $VERSION = 0.07;
+our $VERSION = 0.08;
 
 use XML::DOM::Lite::Constants qw(:all);
 use XML::DOM::Lite::Parser;
