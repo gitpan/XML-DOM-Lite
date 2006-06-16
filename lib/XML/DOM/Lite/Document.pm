@@ -24,7 +24,7 @@ sub parentNode { undef }
 
 sub appendChild {
     my ($self, $node) = @_;
-    if (not $self->{documentElement} and ($node->nodeType & ELEMENT_NODE)) {
+    if (not $self->{documentElement} and ($node->nodeType == ELEMENT_NODE)) {
 	$self->{documentElement} = $node;
     }
     return $self->SUPER::appendChild($node);
@@ -42,20 +42,45 @@ sub getElementById {
 
 sub createElement {
     my ($self, $tagName) = @_;
-    return XML::DOM::Lite::Node->new({
+    my $node = XML::DOM::Lite::Node->new({
 	nodeName => $tagName,
         tagName => $tagName,
         nodeType => ELEMENT_NODE,
     });
+    $node->ownerDocument($self);
+    return $node;
+}
+
+sub createAttribute {
+    my ($self, $nodeName) = @_;
+    my $attr = XML::DOM::Lite::Node->new({
+	nodeName => $nodeName,
+        nodeType => ATTRIBUTE_NODE,
+    });
+    $attr->ownerDocument($self);
+    return $attr;
 }
 
 sub createTextNode {
     my ($self, $str) = @_;
-    return XML::DOM::Lite::Node->new({
+    my $node = XML::DOM::Lite::Node->new({
 	nodeName => '#text',
         nodeType => TEXT_NODE,
         nodeValue => $str,
     });
+    $node->ownerDocument($self);
+    return $node;
+}
+
+sub createDocumentFragment {
+    my $self = shift;
+    my $frag = XML::DOM::Lite::Node->new({
+        nodeName => '#document-fragment',
+        nodeType => DOCUMENT_FRAGMENT_NODE,
+        ownerDocument => $self,
+    });
+    $frag->ownerDocument($self);
+    return $frag;
 }
 
 sub documentElement {
@@ -68,20 +93,12 @@ sub documentElement {
 
 sub selectNodes {
     my ($self, $path) = @_;
-    return $self->XPathParser->evaluate($path, $self);
+    return XML::DOM::Lite::XPath->evaluate($path, $self);
 }
 
 sub selectSingleNode {
     my ($self, $path) = @_;
     return $self->selectNodes($path)->[0];
-}
-
-sub XPathParser {
-    my ($self) = @_;
-    unless (defined ($self->{XPathParser})) {
-	$self->{XPathParser} = XML::DOM::Lite::XPath->new;
-    }
-    return $self->{XPathParser};
 }
 
 sub elements {

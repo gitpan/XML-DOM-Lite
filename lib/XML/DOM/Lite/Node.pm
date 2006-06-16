@@ -11,7 +11,8 @@ sub new {
             $proto->{childNodes} || [ ]
         );
     }
-    $proto->{attributes} = { } unless defined $proto->{attributes};
+    $proto->{attributes} = XML::DOM::Lite::NodeList->new([ ])
+        unless defined $proto->{attributes};
 
     my $self = bless $proto, $class;
     return $self;
@@ -41,8 +42,8 @@ sub nodeType {
 }
 
 sub nodeName {
-    my $self = shift; $self->{tagName} = shift if @_;
-    $self->{tagName}; # Should acutally be nodeName!
+    my $self = shift; $self->{nodeName} = shift if @_;
+    $self->{nodeName};
 }
 
 sub tagName {
@@ -52,9 +53,37 @@ sub tagName {
 
 sub appendChild {
     my ($self, $node) = @_;
-    $node->parentNode($self);
-    $self->childNodes->insertNode($node);
+    if ($node->{parentNode}) {
+        $node->{parentNode}->removeChild($node);
+    }
+    unless ($node->nodeType == DOCUMENT_FRAGMENT_NODE) {
+        $node->{parentNode} = $self;
+        $self->{childNodes}->insertNode($node);
+    } else {
+        while ($node->childNodes->length) {
+            $self->appendChild($node->firstChild);
+        }
+    }
+
     return $node;
+}
+
+sub previousSibling {
+    my $self = shift;
+    if ($self->parentNode) {
+        my $index = $self->parentNode->childNodes->nodeIndex($self);
+        return undef if $index == 0;
+        return $self->parentNode->childNodes->[$index - 1];
+    }
+}
+
+sub nextSibling {
+    my $self = shift;
+    if ($self->parentNode) {
+        my $index = $self->parentNode->childNodes->nodeIndex($self);
+        return undef if $index == @{$self->childNodes->length} - 1;
+        return $self->parentNode->childNodes->[$index + 1];
+    }
 }
 
 sub removeChild {
@@ -70,6 +99,16 @@ sub removeChild {
 sub insertBefore {
     my ($self, $node, $refNode) = @_;
     die "usage error" unless (scalar(@_) == 3);
+    if ($node->parentNode) {
+        $node->parentNode->removeChild($node);
+    }
+    if ($node->nodeType == DOCUMENT_FRAGMENT_NODE) {
+        foreach my $c (@{$node->childNodes}) {
+            $self->insertBefore($c, $refNode);
+        }
+        return;
+    }
+    $node->parentNode($self);
     my $index = $self->childNodes->nodeIndex($refNode);
     if (defined $index) {
 	if ($index <= 0) {
@@ -80,7 +119,6 @@ sub insertBefore {
     } else {
 	die "$refNode is not a child of $self";
     }
-    $node->parentNode($self);
 }
 
 sub replaceChild {
@@ -97,17 +135,33 @@ sub nodeValue {
 
 sub attributes {
     my $self = shift; $self->{attributes} = shift if @_;
-    $self->{attributes};
+    return $self->{attributes};
 }
 
 sub getAttribute {
     my ($self, $attname) = @_;
-    return $self->{attributes}->{$attname};
+    for (my $x = 0; $x < $self->{attributes}->length; $x++) {
+        return  $self->{attributes}->[$x]->{nodeValue}
+            if ($self->{attributes}->[$x]->{nodeName} eq $attname);
+    }
+    return undef;
 }
 
 sub setAttribute {
     my ($self, $attname, $value) = @_;
-    $self->{attributes}->{$attname} = $value;
+    for (my $x = 0; $x < $self->{attributes}->length; $x++) {
+        if ($self->{attributes}->[$x]->{nodeName} eq $attname) {
+            $self->{attributes}->[$x]->{nodeValue} = $value;
+            return $value;
+        }
+    }
+    push @{$self->{attributes}}, XML::DOM::Lite::Node->new({
+        nodeType => ATTRIBUTE_NODE,
+        nodeName => $attname,
+        nodeValue => $value
+    });
+    return $value;
+
 }
 
 sub firstChild {
@@ -127,25 +181,15 @@ sub ownerDocument {
 
 sub getElementsByTagName {
     my ($self, $tag_name) = @_;
-
-    require XML::DOM::Lite::NodeFilter;
-    require XML::DOM::Lite::NodeIterator;
-    require XML::DOM::Lite::NodeList;
-
     my $nlist = XML::DOM::Lite::NodeList->new([ ]);
-
-    my $nfilt = XML::DOM::Lite::NodeFilter->new(sub {
-        my $n = shift;
-	if ($n->tagName eq $tag_name) {
-	    return FILTER_ACCEPT;
-	} else {
-	    return FILTER_REJECT;
-	}
-    });
-
-    my $niter = XML::DOM::Lite::NodeIterator->new($self, SHOW_ELEMENT, $nfilt);
-    while (my $n = $niter->nextNode) {
-	$nlist->insertNode($n);
+    my @stack = @{ $self->childNodes };
+    while (my $n = shift(@stack)) {
+        if ($n->nodeType  == ELEMENT_NODE) {
+            if ($n->tagName eq $tag_name) {
+                $nlist->insertNode($n);
+            }
+            push @stack, @{ $n->childNodes };
+        }
     }
     return $nlist;
 }
@@ -156,8 +200,9 @@ sub cloneNode {
     my $copy = { };
     @copy{keys %$self}     = values %$self;
     $copy->{childNodes}    = XML::DOM::Lite::NodeList->new([ ]);
-    $copy->{attributes}    = \%{$self->attributes};
+    $copy->{attributes}    = XML::DOM::Lite::NodeList->new([@{$self->attributes}]);
     $copy->{tagName}       = $self->tagName;
+    $copy->{nodeName}      = $self->nodeName;
     $copy->{nodeType}      = $self->nodeType;
     $copy->{ownerDocument} = $self->ownerDocument;
 
@@ -169,6 +214,13 @@ sub cloneNode {
 	}
     }
     return $copy;
+}
+
+sub xml {
+    my $self = shift;
+    require XML::DOM::Lite::Serializer;
+    my $serializer = XML::DOM::Lite::Serializer->new();
+    return $serializer->serializeToString( $self );
 }
 
 

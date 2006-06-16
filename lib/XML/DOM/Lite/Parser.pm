@@ -184,10 +184,8 @@ sub _handle_element_node_start {
     if ($elmnt =~ /\/$/) {
 	$node = $self->_handle_element_node_end($elmnt);
     }
-    if (defined $node->{attributes}->{id}) {
-	$self->{document}->setElementById(
-            $node->{attributes}->{id}, $node
-        );
+    if (defined $node->getAttribute('id')) {
+	$self->{document}->setElementById($node->getAttribute("id"), $node);
     }
 
     return $node;
@@ -214,6 +212,17 @@ sub _mk_gen_node {
     $parent->appendChild($node);
     $node->ownerDocument($self->{document});
 
+    if ($type == DOCUMENT_TYPE_NODE) {
+        $node->{nodeName} = '#document-type';
+    } elsif ($type == PROCESSING_INSTRUCTION_NODE) {
+        $node->{nodeName} = '#processing-instruction';
+    } elsif ($type == TEXT_NODE) {
+        $node->{nodeName} = '#text';
+    } elsif ($type == CDATA_SECTION_NODE) {
+        $node->{nodeName} = '#cdata';
+    } elsif ($type == COMMENT_NODE) {
+        $node->{nodeName} = '#comment';
+    }
     return $node;
 }
 
@@ -242,7 +251,7 @@ sub _mk_element_node {
     my $node = XML::DOM::Lite::Node->new({
 	nodeType   => ELEMENT_NODE,
 	attributes => $attrs,
-	nodeName   => $nodeName,
+	nodeName   => $tagName,
 	tagName    => $tagName,
     });
     $parent->appendChild($node);
@@ -254,14 +263,19 @@ sub _mk_element_node {
 sub _parse_attributes {
     my ($self, $elmnt) = @_;
 
-    my %attrs;
-    return \%attrs unless $elmnt;
+    my $attrs = XML::DOM::Lite::NodeList->new([ ]);
+    return $attrs unless $elmnt;
 
     while ($elmnt =~ s/$ElemTagCE2//o) {
-        $attrs{$1} = defined($3) ? $3 : $4;
+        push @$attrs, XML::DOM::Lite::Node->new({
+            nodeType => ATTRIBUTE_NODE,
+            nodeName => $1,
+            nodeValue => defined($3) ? $3 : $4,
+            ownerDocument => $self->{document}
+        });
     }
 
-    return \%attrs;
+    return $attrs;
 }
 
 1;

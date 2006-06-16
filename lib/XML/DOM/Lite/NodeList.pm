@@ -13,6 +13,8 @@ XML::DOM::Lite::NodeList - blessed array ref for containing Node objects
 
 =cut
 
+use overload '%{}' => \&as_hashref, fallback => 1;
+
 sub new {
     my ($class, $nodes) = @_;
     my $self;
@@ -25,12 +27,21 @@ sub new {
     return $self;
 }
 
+sub as_hashref {
+    my $self = shift;
+    my $hashref = { };
+    foreach my $n (@$self) {
+        $hashref->{$n->nodeName} = ($n->nodeValue ? $n->nodeValue : $n);
+    }
+    return $hashref;
+}
+
 sub insertNode {
     my ($self, $node, $index) = @_;
     if (defined $index) {
-	splice(@{$self}, $index, 0, $node);
+        splice(@{$self}, $index, 0, $node);
     } else {
-	push(@{$self}, $node);
+        push(@{$self}, $node);
     }
     return $node;
 }

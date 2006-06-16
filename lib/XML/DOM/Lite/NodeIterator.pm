@@ -1,116 +1,123 @@
 package XML::DOM::Lite::NodeIterator;
 
-use XML::DOM::Lite::NodeList;
-use XML::DOM::Lite::NodeFilter;
 use XML::DOM::Lite::Constants qw(:all);
 
-=head1 NAME
-
-NodeIterator - DOM style node iterator
-
-=head1 SYNOPSIS
-
- use XML::DOM::Lite::Node::Constants qw(:all);
-
- my $nfilt = XML::DOM::Lite::NodeFilter->new(sub {
-     my $node = shift;
-     if ($node->tagName == 'storage') {
-         return FILTER_ACCEPT;
-     } else {
-         return FILTER_SKIP;
-     }
- });
-
- my $niter = XML::DOM::Lite::NodeIterator->new(
-     $template,
-     SHOW_ELEMENT, # bitwise combinations supported eg. SHOW_ELEMENT | SHOW_TEXT
-     $nfilt,
- );
-
- my $node = $niter->nextNode();
-
-=cut
+use constant BEFORE => -1;
+use constant AFTER  => 1;
 
 sub new {
     my ($class, $root, $whatToShow, $nodeFilter) = @_;
-
     my $self = bless {
-	root       => $root,
-	whatToShow => $whatToShow,
+        root => $root,
+        whatToShow => $whatToShow
     }, $class;
-
     unless (defined $nodeFilter) {
-	$nodeFilter = XML::DOM::Lite::NodeFilter->new(sub { return FILTER_ACCEPT });
+        $self->filter({ acceptNode => sub { return FILTER_ACCEPT } });
+    } else {
+        $self->filter($nodeFilter);
     }
-
-    $self->filter($nodeFilter);
-    $nodeFilter->set_ShowType($whatToShow);
-
-    return $self;
+    $self->{currentNode} = $root;
+    $self->{POSITION} = BEFORE;
 }
 
-sub getRoot {
-    return shift->{root};
-}
+sub filter { $_[0]->{filter} = $_[1] if $_[1]; $_[0]->{filter} }
 
 sub nextNode {
     my $self = shift;
+    for (;;) {
+        if ($self->{POSITION} == BEFORE) {
+            # do nothing so we test the currentNode
+        } elsif ($self->{currentNode}->childNodes->length) {
+            $self->{currentNode} = $self->{currentNode}->childNodes->[0];
+        } elsif ($self->{currentNode}->nextSibling) {
+            $self->{currentNode} = $self->{currentNode}->nextSibling;
+        } elsif ($self->{currentNode}->parentNode) {
+            my $p = $self->{currentNode}->parentNode;
+            while ($p and $p->nextSibling == undef and $p != $self->{root}) {
+                $p = $p->parentNode;
+            }
+            last unless ($p and $p->nextSibling);
+            $self->{currentNode} = $p->nextSibling;
+        } else {
+            last;
+        }
+        $self->{POSITION} = AFTER;
+        my $rv;
+        if ($self->filter->{whatToShow} & (1 << ($self->{currentNode}->nodeType - 1))) {
+            $rv = $self->filter->acceptNode($self->{currentNode});
+        } else {
+            $rv = FILTER_REJECT;
+        }
 
-    unless (defined $self->{stack}) {
-	if ($self->getRoot->isa('XML::DOM::Lite::NodeList')) {
-	    $self->{stack} = XML::DOM::Lite::NodeList->new([@{$self->getRoot}]);
-	} else {
-	    $self->{stack} = XML::DOM::Lite::NodeList->new([$self->getRoot]);
-	}
+        if ($rv == FILTER_ACCEPT) {
+            return $self->{currentNode};
+        }
+        elsif ($rv == FILTER_SKIP) {
+            if ($self->{currentNode}->nextSibling) {
+                $self->{currentNode} = $self->{currentNode}->nextSibling;
+            } else {
+                my $p = $self->{currentNode}->parentNode;
+                while ($p and $p->nextSibling == undef) {
+                    $p = $p->parentNode;
+                }
+                last unless ($p and $p->nextSibling);
+                $self->{currentNode} = $p->nextSibling;
+            }
+            next;
+        }
+        elsif ($rv != FILTER_REJECT) {
+            die('filter returned unknown value: `'.$rv."'");
+        }
     }
-
-    my ($node, $found);
-    STEP : while (@{$self->{stack}}) {
-	$node = shift @{$self->{stack}};
-	my $rv = $self->filter->acceptNode($node);
-
-	if ($rv == FILTER_REJECT) {
-	    if (@{$node->childNodes}) {
-		unshift @{$self->{stack}}, @{$node->childNodes};
-	    }
-	}
-	elsif ($rv == FILTER_ACCEPT) {
-	    if (@{$node->childNodes}) {
-		unshift @{$self->{stack}}, @{$node->childNodes};
-	    }
-	    $found = $node;
-	    last STEP;
-	}
-	elsif ($rv == FILTER_SKIP) {
-	    next STEP;
-	}
-	else {
-	    die "got garbage from filter '$rv'";
-	}
-    }
-
-    return $found;
-}
-
-sub currentNode {
-    my $self = shift; $self->{currentNode} = shift if @_;
-    $self->{currentNode};
+    return undef;
 }
 
 sub previousNode {
     my $self = shift;
-    die "Not Yet Implemented!";
-    my $node = pop @{$self->{_prev_stack}};
-    push @{$self->{_nxt_stack}}, $node;
-    do {
-	$node = pop @{$self->{_prev_stack}};
-	push @{$self->{_nxt_stack}}, $node;
-    } until ($self->filter->acceptNode($self));
-}
+    for (;;) {
+        if ($self->{POSITION} == AFTER) {
+            # do nothing
+        } elsif ($self->{currentNode}->previousSibling) {
+            my $p = $self->{currentNode}->previousSibling;
+            if ($p->childNodes->length) {
+                $self->{currentNode} = $p->childNodes->[$p->childNodes->length-1];
+		while ($self->{currentNode}->childNodes->length) {
+		    $self->{currentNode} = $self->{currentNode}->childNodes->[$self->{currentNode}->childNodes->length - 1];
+		}
+            } else {
+                $self->{currentNode} = $p;
+            }
+        } elsif ($self->{currentNode}->parentNode and $self->{currentNode}->parentNode != $self->{root}) {
+            $self->{currentNode} = $self->{currentNode}->parentNode;
+        } else {
+            last;
+        }
+        $self->{POSITION} = BEFORE;
+        my $rv;
+        if ($self->filter->{whatToShow} & (1 << ($self->{currentNode}->nodeType - 1))) {
+            $rv = $self->filter->acceptNode($self->{currentNode});
+        } else {
+            $rv = FILTER_REJECT;
+        }
 
-sub filter {
-    my $self = shift; $self->{filter} = shift if @_;
-    $self->{filter};
+        if ($rv == FILTER_ACCEPT) {
+             return $self->{currentNode};
+        }
+        elsif ($rv == FILTER_SKIP) {
+            if ($self->{currentNode}->previousSibling) {
+                $self->{currentNode} = $self->{currentNode}->previousSibling;
+            } elsif ($self->{currentNode}->parentNode) {
+                $self->{currentNode} = $self->{currentNode}->parentNode;
+            } else {
+                last;
+            }
+            next;
+        }
+        elsif ($rv != FILTER_REJECT) {
+            die('filter returned unknown value: `'.$rv."'");
+        }
+    }
+    return undef;
 }
 
 1;

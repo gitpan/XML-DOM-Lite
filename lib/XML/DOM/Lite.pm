@@ -1,6 +1,6 @@
 package XML::DOM::Lite;
 
-our $VERSION = 0.08;
+our $VERSION = 0.09;
 
 use XML::DOM::Lite::Constants qw(:all);
 use XML::DOM::Lite::Parser;
@@ -11,6 +11,7 @@ use XML::DOM::Lite::NodeIterator;
 use XML::DOM::Lite::NodeFilter;
 use XML::DOM::Lite::Serializer;
 use XML::DOM::Lite::XPath;
+use XML::DOM::Lite::XSLT;
 
 require Exporter;
 @ISA = qw(Exporter);
@@ -23,10 +24,11 @@ use constant NodeIterator => 'XML::DOM::Lite::NodeIterator';
 use constant NodeFilter   => 'XML::DOM::Lite::NodeFilter';
 use constant Serializer   => 'XML::DOM::Lite::Serializer';
 use constant XPath        => 'XML::DOM::Lite::XPath';
+use constant XSLT         => 'XML::DOM::Lite::XSLT';
 
 @EXPORT_OK = (
     @XML::DOM::Lite::Constants::EXPORT_OK,
-    qw(Parser Document Node NodeList NodeIterator NodeFilter Serializer XPath)
+    qw(Parser Document Node NodeList NodeIterator NodeFilter Serializer XPath XSLT)
 );
 
 %EXPORT_TAGS = ( constants => \@XML::DOM::Lite::Constants::EXPORT_OK );
@@ -42,42 +44,37 @@ XML::DOM::Lite - Lite Pure Perl XML DOM Parser Kit
 
  # Parser
  use XML::DOM::Lite qw(Parser :constants);
- 
+  
  $parser = Parser->new( %options );
  $doc = Parser->parse($xmlstr);
  $doc = Parser->parseFile('/path/to/file.xml');
- 
+  
  # strip whitespace (can be about 30% faster)
  $doc = Parser->parse($xml, whitespace => 'strip');
- 
- # rudimentary XPath support
- $nlist = $doc->selectNodes('/xpath/expression');
- $node = $doc->selectSingleNode('/xpath/expression');
- 
- 
- # Document
- $rootnode = $doc->documentElement;
- $nodeWithId = $doc->getElementById("my_node_id");
- $textnode = $doc->createTextNode("some text string");
- $element = $doc->createElement("myTagName");
- $xmlstr = $doc->xml;
- 
- 
+  
+  
  # All Nodes
- $copy = $node->cloneNode($deep);
+ $copy     = $node->cloneNode($deep);
  $nodeType = $node->nodeType;
- $parent = $node->parentNode;
- $name = $node->nodeName;
- 
+ $parent   = $node->parentNode;
+ $name     = $node->nodeName;
+ $xmlstr   = $node->xml;
+ $owner    = $node->ownerDocument;
  
  # Element Nodes
- $last = $node->lastChild;
  $first = $node->firstChild;
- $tag = $node->tagName;
+ $last  = $node->lastChild;
+ $tag   = $node->tagName;
+ $prev  = $node->nextSibling;
+ $next  = $node->previousSibling;
  
  $node->setAttribute("foo", $bar);
  $foo = $node->getAttribute("foo");
- 
+ foreach my $attr (@{$node->attributes}) {  # attributes as nodelist 
+    # ... do stuff
+ }
+ $node->attributes->{foo} = "bar";          # or as hashref (overload)
+  
  $liveNodeList = $node->getElementsByTagName("child"); # deep
  
  $node->insertBefore($newchild, $refchild);
@@ -99,54 +96,78 @@ XML::DOM::Lite - Lite Pure Perl XML DOM Parser Kit
  $nlist->insertNode($newNode, $index);
  $removed = $nlist->removeNode($node);
  $length = $nlist->length; # OR scalar(@$nodeList)
- 
- 
+  
+  
  # NodeIterator and NodeFilter
- use XML::DOM::Lite qw(NodeIterator NodeFilter :constants);
+ use XML::DOM::Lite qw(NodeIterator :constants);
  
- $nfilt = NodeFilter->new(sub {
-     my $n = shift;
-     if ($n->tagName eq 'wantme') {
-         return FILTER_ACCEPT;
-     } elsif ($n->tagName eq 'skipme') {
-         return FILTER_SKIP;
-     } else {
-         return FILTER_REJECT;
-     }
- });
- 
- $niter = NodeIterator->new($rootnode, SHOW_ELEMENT, $nfilt);
+ $niter = NodeIterator->new($rootnode, SHOW_ELEMENT, {
+     acceptNode => sub {
+         my $n = shift;
+         if ($n->tagName eq 'wantme') {
+             return FILTER_ACCEPT;
+         } elsif ($n->tagName eq 'skipme') {
+             return FILTER_SKIP;
+         } else {
+             return FILTER_REJECT;
+         }
+     }        
+ );
  while (my $n = $niter->nextNode) {
      # do stuff
  }
- 
- 
+  
+ # XSLT
+ use XML::DOM::Lite qw(Parser XSLT);
+ $parser = Parser->new( whitespace => 'strip' );
+ $xsldoc = $parser->parse($xsl); 
+ $xmldoc = $parser->parse($xml); 
+ $output = XSLT->process($xmldoc, $xsldoc);
+  
+  
  # XPath
  use XML::DOM::Lite qw(XPath);
- 
- $xp = XPath->new;
- $nlist = $xp->evaluate('/path/to/*[@attr="value"]', $contextNode);
- 
+ $result = XPath->evaluate('/path/to/*[@attr="value"]', $contextNode);
+  
+  
+ # Document
+ $rootnode = $doc->documentElement;
+ $nodeWithId = $doc->getElementById("my_node_id");
+ $textnode = $doc->createTextNode("some text string");
+ $element = $doc->createElement("myTagName");
+ $docfrag = $doc->createDocumentFragment();
+ $xmlstr = $doc->xml;
+ $nlist = $doc->selectNodes('/xpath/expression');
+ $node  = $doc->selectSingleNode('/xpath/expression');
+   
+  
  # Serializer
  use XML::DOM::Lite qw(Serializer);
- 
+  
  $serializer = Serializer->new;
- $xmlout = $serializer->serializerToString($node);
+ $xmlout = $serializer->serializeToString($node);
 
 =head1 INTRODUCTION
 
 Why Yet Another XML Parser?
 
-Because the DOM standard was not made for Perl and lacks certain
+The first reason is portability. XML::DOM::Lite has only one external dependency: L<Scalar::Util>
+without which your Perl installation is probably not sane anyway (if pressed, this dependency could
+even be removed). I wanted a DOM standard XML parser kit complete with XSLT, XPath, NodeIterator,
+Serializer etc. without needing Expat - and it had to be fast enough for serious use. An added
+benefit is that you can freeze and thaw your entire DOM tree using Storable - it's all just Perl.
+
+The second reason is that the DOM standard was not made for Perl and lacks certain
 perlisms, and if you, like me, prefer a perlesque way of doing
-things, then the full DOM API can get a bit clunky.
+things, then the full DOM API can get a bit clunky...
 
 Most of the time when dealing with XML DOM trees, I find myself doing
 a lot of traversal - and when doing so, I usually want my DOM tree to
-be a HASH ref with ARRAY refs of HASH refs (etc.) so that I can say :
+be a HASH ref with ARRAY refs of HASH refs (etc.), so node lists are
+blessed array refs - so you can say :
 
  foreach (@{$node->childNodes}) {
-     if ($_->nodeType & ELEMENT_NODE) {
+     if ($_->nodeType == ELEMENT_NODE) {
          # do stuff
      }
  }
@@ -154,11 +175,12 @@ be a HASH ref with ARRAY refs of HASH refs (etc.) so that I can say :
 ... or ...
 
  @cdata = map {
-     $_->nodeValue if $_->nodeType eq TEXT_NODE
+     $_->nodeValue if $_->nodeType == TEXT_NODE
  }, @{$node->childNodes};
 
 ... or for attributes :
 
+Node lists can also behave as hashrefs using overload, so that we can:
  foreach (keys %{$node->attributes}) {
      # do something
  }
@@ -176,28 +198,19 @@ Other times, I may just not have Expat handy, and I want something
 that can munge a bit of XML into a usable data structure and still
 perform reasonably well.
 
-Finally, and this is really how/why this module came to be, I may not
-feel like going the whole XSLT hog and simply prefer to treat each
-node as a subclassable data entity upon which I can call methods to
-make it transform itself.
-
 And/Or any combination of the above.
 
 =head1 DESCRIPTION
 
 XML::DOM::Lite is designed to be a reasonably fast, highly portable,
 XML parser kit written in pure perl, implementing the DOM standard
-quite closely. To keep performance up and footprint down, certain DOM
-features are not supported such as comment, DOCTYPE nodes and
-processing instructions (these are simply parsed as text
-nodes). However, 90-99% of what most end up doing with XML can be done
-without these features.
+quite closely. To keep performance up and footprint down.
 
 The standard pattern for using the XML::DOM::Lite parser kit is to
  use XML::DOM::Lite qw(Parser :constants);
 
 Available exports are : I<Parser>, I<Node>, I<NodeList>,
-I<NodeIterator>, I<NodeFilter>, I<XPath>, I<Document> and the
+I<NodeIterator>, I<NodeFilter>, I<XPath>, I<Document>, I<XSLT> and the
 constants.
 
 This is mostly for convenience, so that you can save your key-strokes
@@ -206,12 +219,6 @@ you can simply :
  use XML::DOM::Lite::Parser;
  use XML::DOM::Lite::Constants qw(:all);
  # ... etc
-
-=head2 Bitwise I<nodeType> comparison
-
-All I<nodeType> comparisons are done with the bitwise `&' operator
-against the constants exported by XML::DOM::Constants (which is why it
-is customary to import the I<:constants> tag) for performance reasons.
 
 =head2 Parser Options
 
@@ -243,8 +250,9 @@ Better error handling.
 =head1 ACKNOWLEDGEMENTS
 
 Thanks to:
-Robert Frank
-Robert D. Cameron
+Robert Frank,
+Robert D. Cameron,
+Google - for implementing the XPath and XSLT JavaScript libraries which I shamelessly stole
 
 =head1 AUTHOR
 

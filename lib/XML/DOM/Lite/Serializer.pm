@@ -12,17 +12,17 @@ sub serializeToString {
     unless (ref $self) {
 	$self = __PACKAGE__->new;
     }
-    if ($node->nodeType & DOCUMENT_NODE) {
+    if ($node->nodeType == DOCUMENT_NODE) {
 	$node = $node->firstChild;
     }
 
     $self->{_indent_level} = 0 unless defined $self->{_indent_level};
 
     my $out = "";
-    if ($node->nodeType & ELEMENT_NODE) {
+    if ($node->nodeType == ELEMENT_NODE) {
 	$out .= $self->_mkIndent()."<".$node->tagName;
-	foreach my $key (keys %{$node->attributes}) {
-	    $out .= " $key=\"".$node->attributes->{$key}."\"";
+	foreach my $att (@{$node->attributes}) {
+	    $out .= " $att->{nodeName}=\"".$att->{nodeValue}."\"";
 	}
 	if ($node->childNodes->length) {
 	    $out .= ">\n";
@@ -36,7 +36,7 @@ sub serializeToString {
 	    $out .= " />\n";
 	}
     }
-    elsif ($node->nodeType & TEXT_NODE) {
+    elsif ($node->nodeType == TEXT_NODE) {
 	$out .= $node->nodeValue;
     }
 
