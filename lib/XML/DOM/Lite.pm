@@ -1,6 +1,6 @@
 package XML::DOM::Lite;
 
-our $VERSION = 0.09;
+our $VERSION = '0.10';
 
 use XML::DOM::Lite::Constants qw(:all);
 use XML::DOM::Lite::Parser;
@@ -8,7 +8,6 @@ use XML::DOM::Lite::Document;
 use XML::DOM::Lite::Node;
 use XML::DOM::Lite::NodeList;
 use XML::DOM::Lite::NodeIterator;
-use XML::DOM::Lite::NodeFilter;
 use XML::DOM::Lite::Serializer;
 use XML::DOM::Lite::XPath;
 use XML::DOM::Lite::XSLT;
@@ -21,7 +20,6 @@ use constant Document     => 'XML::DOM::Lite::Document';
 use constant Node         => 'XML::DOM::Lite::Node';
 use constant NodeList     => 'XML::DOM::Lite::NodeList';
 use constant NodeIterator => 'XML::DOM::Lite::NodeIterator';
-use constant NodeFilter   => 'XML::DOM::Lite::NodeFilter';
 use constant Serializer   => 'XML::DOM::Lite::Serializer';
 use constant XPath        => 'XML::DOM::Lite::XPath';
 use constant XSLT         => 'XML::DOM::Lite::XSLT';
