@@ -246,7 +246,7 @@ sub _mk_element_node {
     my ($self, $elmnt, $parent) = @_;
 
     ($tagName, $elmnt) = split(/\s+/, $elmnt, 2);
-
+    $tagName =~ s/\/$//;
     my $attrs = $self->_parse_attributes($elmnt);
     my $node = XML::DOM::Lite::Node->new({
 	nodeType   => ELEMENT_NODE,

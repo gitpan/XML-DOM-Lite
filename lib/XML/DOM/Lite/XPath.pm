@@ -513,11 +513,11 @@ sub xpathfunctions {
   },
 
   'local-name'=> sub {
-    warn('not implmented yet: XPath function local-name()');
+    warn('not implemented yet: XPath function local-name()');
   },
 
   'namespace-uri'=> sub {
-    warn('not implmented yet: XPath function namespace-uri()');
+    warn('not implemented yet: XPath function namespace-uri()');
   },
 
   'name'=> sub {
