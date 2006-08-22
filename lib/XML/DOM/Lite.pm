@@ -1,6 +1,8 @@
 package XML::DOM::Lite;
 
-our $VERSION = '0.11';
+our $VERSION = '0.12';
+use warnings;
+use strict;
 
 use XML::DOM::Lite::Constants qw(:all);
 use XML::DOM::Lite::Parser;
@@ -13,7 +15,7 @@ use XML::DOM::Lite::XPath;
 use XML::DOM::Lite::XSLT;
 
 require Exporter;
-@ISA = qw(Exporter);
+our @ISA = qw(Exporter);
 
 use constant Parser       => 'XML::DOM::Lite::Parser';
 use constant Document     => 'XML::DOM::Lite::Document';
@@ -24,12 +26,12 @@ use constant Serializer   => 'XML::DOM::Lite::Serializer';
 use constant XPath        => 'XML::DOM::Lite::XPath';
 use constant XSLT         => 'XML::DOM::Lite::XSLT';
 
-@EXPORT_OK = (
+our @EXPORT_OK = (
     @XML::DOM::Lite::Constants::EXPORT_OK,
     qw(Parser Document Node NodeList NodeIterator NodeFilter Serializer XPath XSLT)
 );
 
-%EXPORT_TAGS = ( constants => \@XML::DOM::Lite::Constants::EXPORT_OK );
+our %EXPORT_TAGS = ( constants => \@XML::DOM::Lite::Constants::EXPORT_OK );
 
 1;
 __END__
