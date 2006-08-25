@@ -68,7 +68,7 @@ sub parse {
     $self->{document} = XML::DOM::Lite::Document->new();
     push @{$self->{stack}}, $self->{document};
 
-    STEP : while (my $n = shift @nodes) {
+    STEP : foreach my $n ( @nodes ) {
         substr($n, 0, 1) eq '<' && do {
             substr($n, 1, 1) eq '!' && do {
                 $self->_handle_decl_node($n);
