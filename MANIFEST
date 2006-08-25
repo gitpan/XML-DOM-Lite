@@ -20,6 +20,7 @@ Makefile.PL
 MANIFEST			This list of files
 t/00-parser.t
 t/01-document.t
+t/01-serializer.t
 t/01-whitespace.t
 t/02-attributes.t
 t/02-node.t

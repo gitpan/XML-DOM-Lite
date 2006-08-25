@@ -18,6 +18,8 @@ sub new {
     }
     $self->{currentNode} = $root;
     $self->{POSITION} = BEFORE;
+
+    return $self;
 }
 
 sub filter { $_[0]->{filter} = $_[1] if $_[1]; $_[0]->{filter} }
@@ -44,7 +46,7 @@ sub nextNode {
         $self->{POSITION} = AFTER;
         my $rv;
         if ($self->filter->{whatToShow} & (1 << ($self->{currentNode}->nodeType - 1))) {
-            $rv = $self->filter->acceptNode($self->{currentNode});
+            $rv = $self->filter->{acceptNode}->($self->{currentNode});
         } else {
             $rv = FILTER_REJECT;
         }
@@ -95,7 +97,7 @@ sub previousNode {
         $self->{POSITION} = BEFORE;
         my $rv;
         if ($self->filter->{whatToShow} & (1 << ($self->{currentNode}->nodeType - 1))) {
-            $rv = $self->filter->acceptNode($self->{currentNode});
+            $rv = $self->filter->{acceptNode}->($self->{currentNode});
         } else {
             $rv = FILTER_REJECT;
         }
