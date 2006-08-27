@@ -157,7 +157,7 @@ sub _handle_pi_node {
 sub _handle_text_node {
     my ($self, $text) = @_;
     $parent = $self->{stack}->[$#{$self->{stack}}];
-    $text =~ s/^\n//so; return unless $text;
+    $text =~ s/^\n//so; return unless defined $text;
     return $self->_mk_gen_node($text, $parent, TEXT_NODE);
 }
 
